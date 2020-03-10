@@ -12,6 +12,8 @@ class Graph():
         self.edgelist = []
         self.MSTedges = []
         self.MST_adj = []
+        self.MST_parent = [] # ith entry = parent of node i in the spanning tree
+        self.MST_ordering = []
 
     # A utility function to print the constructed MST stored in parent[]
 
@@ -20,6 +22,28 @@ class Graph():
         for i in range(1, self.V):
             print(parent[i], "-", i, "\t", self.adj[i][parent[i]])
 
+    def depth_1st_order_MST(self, edgelist):
+        ### Computes depth-first ordering of nodes in the MST
+        B = self.edge2adj(edgelist)
+        # print('B', B)
+        key = [float('inf')] * self.V
+        key[0] = 0 # first node is the root
+        ordered = [False] * self.V
+        ordered[0] = True
+        ordering = [0]
+
+        while False in ordered:
+            for v in range(self.V):
+            # v = next(x for x in range(self.V) if ordered[x])
+            # v = ordered.index(False) # smallest index of True in list ordered
+            # v = v - 1  # largest index of True in the first block of True's in the list ordered
+                if ordered[v]:
+                    for u in range(self.V):
+                        if B[u][v] == 1 and not ordered[u]:
+                            ordering.append(u)
+                            ordered[u] = True
+        return ordering
+
     # A utility function to find the vertex with
     # minimum distance value, from the set of vertices
     # not yet included in shortest path tree
@@ -27,7 +51,7 @@ class Graph():
 
         # Initilaize min value
         min = float('inf')
-
+        min_index = 0
         for v in range(self.V):
             if key[v] < min and mstSet[v] == False:
                 min = key[v]
@@ -38,14 +62,27 @@ class Graph():
     # Function to construct and print MST for a graph
     # represented using adjacency matrix representation
     def primMST(self):
+        '''
+        1) Create a set mstSet that keeps track of vertices already included in MST.
+        2) Assign a key value to all vertices in the input graph. Initialize all key values as INFINITE.
+        Assign key value as 0 for the first vertex so that it is picked first.
+        3) While mstSet doesn’t include all vertices:
+            a) Pick a vertex u which is not there in mstSet and has minimum key value.
+            b) Include u to mstSet.
+            c) Update key value of all adjacent vertices of u. To update the key values, iterate through all adjacent
+            vertices. For every adjacent vertex v, if weight of edge u-v is less than the previous key value of v,
+            update the key value as weight of u-v
+        '''
+
         # Key values used to pick minimum weight edge in cut
+        ### Make sure g.adj is not all zeros -- it will return minKey error
+
         key = [float('inf')] * self.V
         parent = [None] * self.V  # Array to store constructed MST
         # Make key 0 so that this vertex is picked as first vertex
         key[0] = 0
         mstSet = [False] * self.V
-
-        parent[0] = -1  # First node is always the root of
+        parent[0] = -1  # First node is always the root of the tree
 
         for count in range(self.V):
 
@@ -70,11 +107,15 @@ class Graph():
                     key[v] = self.adj[u][v]
                     parent[v] = u
 
+            # print('parent', parent)
         edgelist = []
         for i in range(1, self.V):
             edgelist.append([parent[i], i])
             # self.printMST(parent)
         self.MSTedges = edgelist
+        self.MST_parent = parent
+        self.MST_ordering = self.depth_1st_order_MST(edgelist)
+        self.MST_adj = self.edge2adj(edgelist)
         return edgelist
 
     def edge2adj_directed(self, edgelist):
@@ -91,13 +132,15 @@ class Graph():
     def edge2adj(self, edgelist):
         # nodes must be numbers in a sequential range starting at 0 - so this is the number of nodes.
         E = edgelist
-        size = len(set([n for e in E for n in e]))
+        V = set([n for e in E for n in e])
+        size = len(V)
+        min_node = min(V)
         # make an empty adjacency list
         adjacency = [[0] * size for _ in range(size)]
         # populate the list for each edge
         for sink, source in E:
-            adjacency[sink][source] = 1
-            adjacency[source][sink] = 1
+            adjacency[sink-min_node][source-min_node] = 1
+            adjacency[source-min_node][sink-min_node] = 1
         return adjacency
 
     def adj2edge(self, adj):
